@@ -1,0 +1,135 @@
+From d9a0695afab267791e6d16b52d06a233ab8bc766 Mon Sep 17 00:00:00 2001
+From: achyut vardhan <achyutvardhan234@gmail.com>
+Date: Wed, 7 Jun 2023 01:03:24 +0530
+Subject: [PATCH] task 2 complete
+
+---
+ package.json  |  6 ++----
+ src/App.tsx   | 24 ++++++++++++++++++------
+ src/Graph.tsx | 16 +++++++++++++---
+ 3 files changed, 33 insertions(+), 13 deletions(-)
+
+diff --git a/package.json b/package.json
+index ca234e9..1b9072c 100644
+--- a/package.json
++++ b/package.json
+@@ -18,10 +18,8 @@
+     "react-scripts": "2.1.3"
+   },
+   "scripts": {
+-    "start": "react-scripts --openssl-legacy-provider start",
+-    "build": "react-scripts build",
+-    "test": "react-scripts test",
+-    "eject": "react-scripts eject"
++    "build": "react-scripts build --openssl-legacy-provider",
++    "start": "react-scripts start --openssl-legacy-provider"
+   },
+   "eslintConfig": {
+     "extends": "react-app"
+diff --git a/src/App.tsx b/src/App.tsx
+index 0728518..f5dd9c3 100755
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -2,12 +2,14 @@ import React, { Component } from 'react';
+ import DataStreamer, { ServerRespond } from './DataStreamer';
+ import Graph from './Graph';
+ import './App.css';
++import internal from 'stream';
+ 
+ /**
+  * State declaration for <App />
+  */
+ interface IState {
+   data: ServerRespond[],
++  showGraph: boolean,
+ }
+ 
+ /**
+@@ -22,6 +24,7 @@ class App extends Component<{}, IState> {
+       // data saves the server responds.
+       // We use this state to parse data down to the child element (Graph) as element property
+       data: [],
++      showGraph:false,
+     };
+   }
+ 
+@@ -29,18 +32,27 @@ class App extends Component<{}, IState> {
+    * Render Graph react component with state.data parse as property data
+    */
+   renderGraph() {
+-    return (<Graph data={this.state.data}/>)
++    if(this.state.showGraph){
++    return (<Graph data={this.state.data}/>)}
+   }
+ 
+   /**
+    * Get new data from server and update the state with the new data
+    */
+   getDataFromServer() {
+-    DataStreamer.getData((serverResponds: ServerRespond[]) => {
+-      // Update the state by creating a new array of data that consists of
+-      // Previous data in the state and the new data from server
+-      this.setState({ data: [...this.state.data, ...serverResponds] });
+-    });
++    let x=0;
++    const interval = setInterval(()=>{
++
++      DataStreamer.getData((serverResponds: ServerRespond[]) => {
++        // Update the state by creating a new array of data that consists of
++        // Previous data in the state and the new data from server
++        this.setState({ data: serverResponds,
++        showGraph:true });
++      });
++      x++;
++      if(x>1000)
++      clearInterval(interval);
++    },100)
+   }
+ 
+   /**
+diff --git a/src/Graph.tsx b/src/Graph.tsx
+index 3b2a7da..16c1773 100644
+--- a/src/Graph.tsx
++++ b/src/Graph.tsx
+@@ -14,7 +14,7 @@ interface IProps {
+  * Perspective library adds load to HTMLElement prototype.
+  * This interface acts as a wrapper for Typescript compiler.
+  */
+-interface PerspectiveViewerElement {
++interface PerspectiveViewerElement extends HTMLElement {
+   load: (table: Table) => void,
+ }
+ 
+@@ -32,7 +32,7 @@ class Graph extends Component<IProps, {}> {
+ 
+   componentDidMount() {
+     // Get element to attach the table from the DOM.
+-    const elem: PerspectiveViewerElement = document.getElementsByTagName('perspective-viewer')[0] as unknown as PerspectiveViewerElement;
++    const elem= document.getElementsByTagName('perspective-viewer')[0] as unknown as PerspectiveViewerElement;
+ 
+     const schema = {
+       stock: 'string',
+@@ -46,9 +46,19 @@ class Graph extends Component<IProps, {}> {
+     }
+     if (this.table) {
+       // Load the `table` in the `<perspective-viewer>` DOM reference.
+-
++      
+       // Add more Perspective configurations here.
+       elem.load(this.table);
++      elem.setAttribute('view','y_line');
++      elem.setAttribute('column-pivots','["stock"]');
++      elem.setAttribute('row-pivots','["timestamp"]');
++      elem.setAttribute('columns','["top_ask_price"]');
++      elem.setAttribute('aggregates',`{
++       "stock": "distinct count",
++      "top_ask_price" : "avg",
++      "top_bid_price" : "avg",
++      "timestamp" : "distinct count"
++      }`);
+     }
+   }
+ 
+-- 
+2.37.1.windows.1
+
